@@ -213,10 +213,6 @@
 - [] typical CRUD, utilize (task or job) project
 - [] remember we check already for role 'admin'
 
-#### Upload Image
-
-- [] if some question, re-watch 07-file-upload
-- [] images folder with two images
 
 #### Review Model
 

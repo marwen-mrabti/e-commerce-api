@@ -46,6 +46,7 @@ app.get("/api/v1", (req, res) => {
 app.use(`/api/${process.env.API_VERSION}/auth`, require(`./routes/auth.route`));
 app.use(`/api/${process.env.API_VERSION}/users`, require(`./routes/user.route`));
 app.use(`/api/${process.env.API_VERSION}/products`, require(`./routes/product.route`));
+app.use(`/api/${process.env.API_VERSION}/reviews`, require(`./routes/review.route`));
 
 //error handling middleware
 app.use(notFound); //404

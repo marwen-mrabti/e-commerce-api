@@ -24,16 +24,15 @@ const uploadImage = async (req, res, next) => {
   const fileExtension = path.extname(productImage.name);
   //file name
   const fileName = productImage.name.split(".").slice(0, -1).join(".");
-
   const imageName = `${fileName}-${Date.now()}.${fileExtension}`;
+  //file path
   const imagePath = path.join(__dirname, "../public/uploads", imageName);
-
+  //move file to uploads folder
   await productImage.mv(imagePath);
 
   // check file size and resize if necessary
   if (productImage.size > process.env.MAX_FILE_UPLOAD) {
     const outputPath = path.join(__dirname, "../public/uploads", imageName);
-
     await sharp(imagePath)
       .resize({ width: 500 })
       .toFile(outputPath, (err, info) => {
