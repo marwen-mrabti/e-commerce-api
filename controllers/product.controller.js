@@ -5,6 +5,7 @@ const BadRequestError = require("../errors/bad-request");
 const CustomAPIError = require("../errors/custom-api");
 const NotFoundError = require("../errors/not-found");
 const Product = require("../models/Product");
+const Review = require("../models/Review");
 
 /**
  * @desc    Get all products
@@ -15,7 +16,10 @@ const Product = require("../models/Product");
  * @returns {Promise<void>} [{...product},...]
  */
 const getProducts = async (req, res) => {
-  const products = await Product.find();
+  const products = await Product.find().populate({
+    path: "reviews",
+    select: "rating title",
+  });
   res.status(StatusCodes.OK).json(products);
 };
 
@@ -28,15 +32,16 @@ const getProducts = async (req, res) => {
  * @returns {Promise<void>} {...product}
  */
 const getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.productId);
-    if (!product) {
-      throw new NotFoundError(`Product with id ${req.params.productId} not found`);
-    }
-    res.status(200).json(product);
-  } catch (error) {
-    throw new CustomAPIError(error.message, 500);
+  const { productId } = req.params;
+  const product = await Product.findById(productId).populate({
+    path: "reviews",
+    select: "rating title",
+  });
+  if (!product) {
+    throw new NotFoundError(`Product with id ${productId} not found`);
   }
+
+  res.status(200).json(product);
 };
 
 /**
@@ -123,6 +128,8 @@ const deleteProduct = async (req, res) => {
   if (!product) {
     throw new NotFoundError(`Product with id ${productId} not found`);
   }
+
+  await Review.deleteMany({ product: productId });
 
   if (product.image) {
     const imagePath = path.join(__dirname, "../public", `${product.image}`);

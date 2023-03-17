@@ -1,5 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
+const CustomAPIError = require("../errors/custom-api");
 const NotFoundError = require("../errors/not-found");
+const UnauthorizedError = require("../errors/unauthorized");
 const Product = require("../models/Product");
 const Review = require("../models/Review");
 const User = require("../models/User");
@@ -10,7 +12,7 @@ const User = require("../models/User");
  * @access  Public
  * @param   {String} productId
  */
-const getReviewsByProduct = async (req, res, next) => {
+const getReviewsByProduct = async (req, res) => {
   const { productId } = req.params;
   const product = await Product.findById(productId);
   if (!product) {
@@ -27,7 +29,7 @@ const getReviewsByProduct = async (req, res, next) => {
  * @access  Public
  * @param   {String} reviewId
  */
-const getReview = async (req, res, next) => {
+const getReview = async (req, res) => {
   const { reviewId } = req.params;
   const review = await Review.findById(reviewId)
     .populate({
@@ -37,6 +39,11 @@ const getReview = async (req, res, next) => {
     .populate({
       path: "product",
       select: "name company",
+      //use this to populate a sub-sub-document review-->product-->user:creator
+      populate: {
+        path: "user",
+        select: "name email",
+      },
     });
 
   if (!review) {
@@ -52,20 +59,23 @@ const getReview = async (req, res, next) => {
  * @access  Private
  * @param   {String} productId
  * @param   {String} userId
- * @param   {String} review
- * @param   {Number} rating
  * @param   {String} title
  * @param   {String} comment
+ * @param   {Number} rating
  */
-const createReview = async (req, res, next) => {
+const createReview = async (req, res) => {
   const { productId } = req.params;
   const { id: userId } = req.user;
-  const { review, rating, title, comment } = req.body;
+  const { rating, title, comment } = req.body;
 
   const product = await Product.findById(productId);
-  const user = await User.findById(userId);
-  if (!product || !user) {
-    throw new NotFoundError("Product or User not found");
+  if (!product) {
+    throw new NotFoundError("Product not found");
+  }
+
+  const alreadyReviewed = await Review.findOne({ product: productId, user: userId });
+  if (alreadyReviewed) {
+    throw new CustomAPIError("You have already reviewed this product");
   }
 
   const newReview = await Review.create({
@@ -85,15 +95,25 @@ const createReview = async (req, res, next) => {
  * @access  Private
  * @param   {String} reviewId
  */
-const updateReview = async (req, res, next) => {
+const updateReview = async (req, res) => {
   const { reviewId } = req.params;
-  const review = await Review.findByIdAndUpdate(
-    reviewId,
-    {
-      $set: req.body,
-    },
-    { new: true, runValidators: true }
-  );
+  const { rating, title, comment } = req.body;
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    throw new NotFoundError("Review not found");
+  }
+  if (review.user.toString() !== req.user.id && req.user.role !== "admin") {
+    throw new UnauthorizedError(
+      "You are not authorized to make modifications this review"
+    );
+  }
+
+  review.rating = rating ? rating : review.rating;
+  review.title = title ? title : review.title;
+  review.comment = comment ? comment : review.comment;
+  await review.save();
+
   res.status(StatusCodes.OK).json(review);
 };
 
@@ -105,8 +125,17 @@ const updateReview = async (req, res, next) => {
  * @param   {String} productId
  * @param   {String} userId
  */
-const deleteReview = async (req, res, next) => {
-  res.status(StatusCodes.CREATED).json("res.review");
+const deleteReview = async (req, res) => {
+  const { reviewId } = req.params;
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    throw new NotFoundError("Review not found");
+  }
+  if (review.user.toString() !== req.user.id && req.user.role !== "admin") {
+    throw new UnauthorizedError("You are not authorized to delete this review");
+  }
+  await review.remove();
+  res.status(StatusCodes.OK).json({ message: "Review deleted" });
 };
 
 module.exports = {

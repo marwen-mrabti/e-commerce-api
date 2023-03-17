@@ -26,7 +26,7 @@ const getUserById = async (req, res) => {
   if (req.user.id !== id && req.user.role !== "admin") {
     throw new UnauthenticatedError("You are not authorized");
   }
-  const user = await User.findById(id).select("-password");
+  const user = await User.findById(id).select("-password").populate("reviews");
   if (!user) {
     throw new NotFoundError("User not found");
   }

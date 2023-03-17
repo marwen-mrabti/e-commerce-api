@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    versionKey: false,
+    selectPopulatedPaths: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
@@ -60,5 +64,13 @@ userSchema.methods.comparePassword = async function (password) {
   const isMatch = bcrypt.compare(password, this.password);
   return isMatch;
 };
+
+// Reverse populate with virtual
+userSchema.virtual("reviews", {
+  ref: "Review",
+  localField: "_id",
+  foreignField: "user",
+  justOne: false,
+});
 
 module.exports = mongoose.model("User", userSchema);

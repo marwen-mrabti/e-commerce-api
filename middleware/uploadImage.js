@@ -24,7 +24,7 @@ const uploadImage = async (req, res, next) => {
   const fileExtension = path.extname(productImage.name);
   //file name
   const fileName = productImage.name.split(".").slice(0, -1).join(".");
-  const imageName = `${fileName}-${Date.now()}.${fileExtension}`;
+  const imageName = `${fileName}-${Date.now()}${fileExtension}`;
   //file path
   const imagePath = path.join(__dirname, "../public/uploads", imageName);
   //move file to uploads folder
